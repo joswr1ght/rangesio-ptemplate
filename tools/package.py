@@ -171,7 +171,8 @@ def build_package(rio):
                                       "targets": [sid]}]})
     return {"id": PKG, "name": rio["package"]["name"], "notes": rio["package"].get("notes", ""),
             "challengeHintsRevealMode": "Allow hint reveals", "scoringMode": "Infinite",
-            "primaryDimensionDisplayMode": "Max", "files": [], "parameters": [],
+            "primaryDimensionDisplayMode": "Max", "scoreRankingMode": "Primary only",
+            "files": [], "parameters": [],
             "dimensions": [{"id": DIM, "label": "Points", "unit": "pts", "unitPlacement": "After value",
                             "isPrimary": True, "precision": "No decimal place", "startingValue": 0,
                             "displayMode": "Before and after completion"}],
@@ -290,7 +291,7 @@ def verify(sent, got):
         raise PackageError("Round-trip verification failed. Compare the generated JSON with the saved export")
 
 
-def publish(rio, package, out):
+def publish(rio, package, out, campaign):
     if target_id(rio):
         raise PackageError("A target UUID is already configured. Use make deploy to update it")
     receipt = out.parent / "publish-response.json"
@@ -307,9 +308,9 @@ def publish(rio, package, out):
     uuid = details.get("id") if isinstance(details, dict) else None
     if not uuid:
         print(f"Create request completed. Response: {receipt}. Confirm the new ID with riocli list-packages; "
-              "then set package.uuid")
+              f"then set ranges_io.package.uuid in {campaign}")
         return
-    print(f"Published {uuid}. Set ranges_io.package.uuid to this ID before make deploy")
+    print(f"Published {uuid}. Before make deploy, edit {campaign} and set ranges_io.package.uuid: {uuid}")
     got = export_package(command, str(UUID(uuid)))
     write_json(out.parent / "publish-export.json", got)
     verify(package, got)
@@ -365,7 +366,7 @@ def main():
         write_json(args.out, package)
         print(f"Built {args.out}")
         if args.action == "publish":
-            publish(rio, package, args.out)
+            publish(rio, package, args.out, args.campaign)
         elif args.action == "deploy":
             deploy(rio, package, args.out)
     except (PackageError, OSError, ValueError, TypeError, yaml.YAMLError, subprocess.TimeoutExpired) as exc:

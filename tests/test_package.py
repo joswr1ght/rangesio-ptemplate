@@ -16,6 +16,7 @@ import package as pkg
 
 
 UUID = "00000000-0000-0000-0000-000000000001"
+CAMPAIGN = "campaign/campaign.yaml"
 
 
 class PackageTests(unittest.TestCase):
@@ -241,14 +242,14 @@ class PackageTests(unittest.TestCase):
         self.rio["package"]["uuid"] = UUID
         with patch.object(pkg, "doctor") as doctor:
             with self.assertRaisesRegex(pkg.PackageError, "already configured"):
-                pkg.publish(self.rio, {}, self.out)
+                pkg.publish(self.rio, {}, self.out, CAMPAIGN)
             doctor.assert_not_called()
 
     def test_failed_online_preflight_prevents_publication(self):
         with patch.object(pkg, "doctor", side_effect=pkg.PackageError("Authentication failed")), \
                 patch.object(pkg, "cli_json") as cli:
             with self.assertRaises(pkg.PackageError):
-                pkg.publish(self.rio, {}, self.out)
+                pkg.publish(self.rio, {}, self.out, CAMPAIGN)
             cli.assert_not_called()
             self.assertFalse((self.out.parent / "publish-response.json").exists())
 
@@ -256,17 +257,19 @@ class PackageTests(unittest.TestCase):
         with patch.object(pkg, "doctor", return_value=["cli"]), \
                 patch.object(pkg, "cli_json", side_effect=subprocess.TimeoutExpired("cli", 60)):
             with self.assertRaises(subprocess.TimeoutExpired):
-                pkg.publish(self.rio, {}, self.out)
+                pkg.publish(self.rio, {}, self.out, CAMPAIGN)
         self.assertTrue((self.out.parent / "publish-response.json").is_file())
         with self.assertRaisesRegex(pkg.PackageError, "previous publish receipt"):
-            pkg.publish(self.rio, {}, self.out)
+            pkg.publish(self.rio, {}, self.out, CAMPAIGN)
 
     def test_publish_uses_cli_add_package_and_saves_response(self):
         built = pkg.build_package(self.rio)
         with patch.object(pkg, "doctor", return_value=["cli"]), \
                 patch.object(pkg, "cli_json", return_value={"package": {"id": UUID}}) as cli, \
                 patch.object(pkg, "export_package", return_value=built):
-            pkg.publish(self.rio, built, self.out)
+            with patch("builtins.print") as printed:
+                pkg.publish(self.rio, built, self.out, CAMPAIGN)
+            self.assertIn(f"edit {CAMPAIGN} and set ranges_io.package.uuid: {UUID}", str(printed.call_args_list))
             self.assertIn("add-package", cli.call_args.args)
             self.assertIn(str(self.out), cli.call_args.args)
         self.assertEqual(json.loads((self.out.parent / "publish-response.json").read_text())["package"]["id"], UUID)
