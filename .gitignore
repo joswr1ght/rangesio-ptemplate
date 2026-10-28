@@ -1,0 +1,22 @@
+# Generated packages, receipts, backups, and exports (contain answers)
+dist/
+
+# Python and tool caches
+.cache/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Local credentials
+.env
+.env.*
+.rio/
+credentials
+
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store

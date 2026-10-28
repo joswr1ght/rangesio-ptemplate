@@ -1,0 +1,88 @@
+# yaml-language-server: $schema=../schema/campaign.schema.json
+# Edit this file, then run make check and make build.
+ranges_io:
+  package:
+    name: Sample Investigation
+    notes: An example investigation with checkpoints, hints, debriefs, and chat.
+    # Leave blank for make publish. Set the returned UUID before make deploy.
+    uuid: null
+
+  hint_policy:
+    penalty: 0
+
+  # Use avatar references from the target package's export when deploying updates.
+  actors:
+    - id: lead
+      name: Morgan
+
+  challenges:
+    - position: 1
+      group: Getting Started
+      short_title: Investigation Briefing
+      briefing: |
+        An application access log contains a request for a sensitive file.
+        Use the log entry in the next checkpoint to investigate the request.
+      answer:
+        mode: Acknowledged
+        text: Begin the investigation
+        points: 0
+      debrief: The application log is available in the next checkpoint.
+
+    - position: 2
+      group: Investigation
+      short_title: Identify the Requested File
+      briefing: |
+        The application recorded this request:
+
+        ```text
+        2026-01-15T09:12:00Z client=192.0.2.10 method=GET path=/etc/passwd status=200
+        ```
+
+        What file path did the client request?
+      answer:
+        mode: Case sensitive
+        value: /etc/passwd
+        points: 100
+      hints:
+        - The path field records the requested file.
+      debrief: |
+        The request targeted `/etc/passwd`. The HTTP 200 response indicates
+        that the server reported success, but this entry alone does not
+        establish what content the response contained.
+
+    - position: 3
+      group: Investigation
+      short_title: Interpret the Response
+      briefing: |
+        The previous request returned HTTP status 200. Which conclusion
+        does that status support without examining the response body?
+      answer:
+        mode: Multiple choice
+        random: true
+        options:
+          - value: The server reported that the request succeeded.
+            correct: true
+            points: 100
+          - value: The client obtained a password hash.
+            correct: false
+            points: 0
+          - value: The client executed a command on the server.
+            correct: false
+            points: 0
+      debrief: |
+        Status 200 reports a successful HTTP request. Determining whether
+        the server disclosed a file requires the response body or other evidence.
+
+  stories:
+    - id: handoff
+      name: Application Log Handoff
+      actors: [lead]
+      trigger:
+        challenge: 1
+      messages:
+        - actor: lead
+          delay: 0
+          text: I copied the application log entry into the next checkpoint.
+        - actor: lead
+          delay: 1500
+          text: Start with the requested path. We still need to establish what the server returned.
